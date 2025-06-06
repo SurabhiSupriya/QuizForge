@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QuizForge: AI Quiz Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f4f7f9;
+      margin: 0;
+      padding: 40px;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      color: #2a3f5f;
+    }
+    .upload-box {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    input[type="file"] {
+      padding: 8px;
+    }
+    button {
+      background-color: #1e90ff;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .quiz-container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .question-box {
+      margin-bottom: 20px;
+    }
+    .question {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .option {
+      padding: 8px;
+      margin: 5px 0;
+      background: #f1f1f1;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .option.correct {
+      background-color: #c8e6c9;
+      font-weight: bold;
+    }
+    .option.incorrect {
+      background-color: #ffcdd2;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>QuizForge: Generate MCQs from PDFs</h2>
+
+  <div class="upload-box">
+    <input type="file" id="pdfFile" accept="application/pdf">
+    <button onclick="uploadPDF()">Upload & Generate Quiz</button>
+  </div>
+
+  <div id="quizContainer" class="quiz-container" style="display: none;"></div>
+
+  <script>
+    async function uploadPDF() {
+      const fileInput = document.getElementById('pdfFile');
+      const file = fileInput.files[0];
+      if (!file) return alert('Please select a PDF.');
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const uploadRes = await fetch('http://127.0.0.1:5000/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+      const docId = uploadData.doc_id;
+
+      const quizRes = await fetch(`http://127.0.0.1:5000/generate-quiz/${docId}`);
+      const quizData = await quizRes.json();
+
+      renderQuiz(quizData.quiz);
+    }
+
+    function renderQuiz(quiz) {
+      const container = document.getElementById('quizContainer');
+      container.innerHTML = `<p><strong>Total Questions:</strong> ${quiz.length}</p>`;
+      quiz.forEach((q, index) => {
+        const qBox = document.createElement('div');
+        qBox.className = 'question-box';
+
+        const question = document.createElement('div');
+        question.className = 'question';
+        question.innerText = `${index + 1}. ${q.question}`;
+        qBox.appendChild(question);
+
+        q.options.forEach(opt => {
+          const optElem = document.createElement('div');
+          optElem.className = 'option';
+          optElem.innerText = opt;
+          optElem.onclick = () => {
+            const allOptions = optElem.parentElement.querySelectorAll('.option');
+            allOptions.forEach(o => {
+              o.classList.remove('correct', 'incorrect');
+              if (o.innerText === q.answer) o.classList.add('correct');
+              else o.classList.add('incorrect');
+            });
+          };
+          qBox.appendChild(optElem);
+        });
+
+        container.appendChild(qBox);
+      });
+      container.style.display = 'block';
+    }
+  </script>
+
+</body>
+</html>
